@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Keyboard, Check, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { Check, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import { usePreferences } from "../lib/PreferencesContext";
 import { demoTransliterate } from "../lib/engine";
 import { PRODUCT_NAME, TAGLINE } from "../lib/preferences";
