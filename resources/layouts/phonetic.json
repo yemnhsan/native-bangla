@@ -1,0 +1,9 @@
+{
+  "id": "phonetic",
+  "name": "Smart Phonetic",
+  "description": "Default Native Bangla phonetic mode — Latin to Bengali via Native Engine",
+  "license": "MIT",
+  "version": 1,
+  "type": "phonetic",
+  "engine": "Native Engine"
+}

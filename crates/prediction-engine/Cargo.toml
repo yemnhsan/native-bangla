@@ -1,0 +1,25 @@
+[package]
+name = "prediction-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Native Predict — dictionary-backed word and next-word prediction"
+rust-version.workspace = true
+
+[dependencies]
+dictionary-core = { path = "../dictionary-core" }
+phonetic-engine = { path = "../phonetic-engine" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+unicode-normalization = { workspace = true }
+indexmap = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+tempfile = "3"
+
+[[bench]]
+name = "prediction_bench"
+harness = false

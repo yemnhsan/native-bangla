@@ -1,0 +1,16 @@
+[package]
+name = "native-bangla-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "native-bangla-bench"
+path = "src/main.rs"
+
+[dependencies]
+phonetic-engine = { path = "../../crates/phonetic-engine" }
+prediction-engine = { path = "../../crates/prediction-engine" }
+dictionary-core = { path = "../../crates/dictionary-core" }
+anyhow = { workspace = true }

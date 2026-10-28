@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --nb-surface: #f7f8fa;
+  --nb-elevated: #ffffff;
+  --nb-ink: #1c1f26;
+  --nb-muted: #6b7280;
+  --nb-border: #e5e7eb;
+  --nb-accent: #4f6bed;
+  --nb-accent-soft: rgba(79, 107, 237, 0.12);
+  --nb-radius: 10px;
+  --nb-shadow: 0 1px 2px rgba(28, 31, 38, 0.04), 0 4px 16px rgba(28, 31, 38, 0.04);
+  --nb-sidebar: #ffffff;
+  --nb-sidebar-hover: #f3f4f6;
+  --nb-success: #2f9e6a;
+  --nb-warning: #c4841d;
+}
+
+[data-theme="dark"] {
+  --nb-surface: #12141a;
+  --nb-elevated: #1a1d24;
+  --nb-ink: #f0f1f3;
+  --nb-muted: #9ca3af;
+  --nb-border: #2a2e38;
+  --nb-accent: #6b84f5;
+  --nb-accent-soft: rgba(107, 132, 245, 0.16);
+  --nb-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --nb-sidebar: #161920;
+  --nb-sidebar-hover: #22262f;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(79, 107, 237, 0.06), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(28, 31, 38, 0.03), transparent 50%),
+    var(--nb-surface);
+  color: var(--nb-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bn {
+  font-family: "Noto Sans Bengali", "DM Sans", sans-serif;
+}
+
+@layer components {
+  .nb-card {
+    @apply rounded-nb border border-border bg-elevated shadow-nb;
+  }
+
+  .nb-input {
+    @apply w-full rounded-nb border border-border bg-elevated px-3 py-2 text-sm text-ink outline-none transition;
+    @apply focus:border-accent focus:ring-2 focus:ring-accent-soft;
+  }
+
+  .nb-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-nb px-3.5 py-2 text-sm font-medium transition;
+  }
+
+  .nb-btn-primary {
+    @apply nb-btn bg-accent text-white hover:brightness-105 active:brightness-95;
+  }
+
+  .nb-btn-ghost {
+    @apply nb-btn border border-border bg-elevated text-ink hover:bg-accent-soft;
+  }
+}

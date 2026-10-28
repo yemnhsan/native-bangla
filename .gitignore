@@ -1,0 +1,59 @@
+# Build
+/target/
+/build/
+**/dist/
+**/out/
+**/.vite/
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+!tools/**/*.exe
+
+# Node
+node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# IDE / OS
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Generated dictionaries (keep sources)
+resources/dictionaries/generated/*
+!resources/dictionaries/generated/.gitkeep
+
+# Test / coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Local
+*.log
+.tmp/
+.cache/
