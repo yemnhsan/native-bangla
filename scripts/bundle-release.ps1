@@ -92,6 +92,35 @@ $readme | Set-Content "$releaseDir\README.txt" -Encoding UTF8
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Compress-Archive -Path "$releaseDir\*" -DestinationPath $zipPath
 Write-Host ""
-Write-Host "Release package ready:" -ForegroundColor Green
+Write-Host "Zip package ready:" -ForegroundColor Green
 Write-Host "  $zipPath"
 Write-Host "  Size: $([math]::Round((Get-Item $zipPath).Length / 1MB, 2)) MB"
+
+# Build Inno Setup installer (.exe) if ISCC is installed
+$isccCmd = Get-Command iscc -ErrorAction SilentlyContinue
+$iscc = if ($isccCmd) { $isccCmd.Source } else { $null }
+if (-not $iscc) {
+    $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        "C:\Program Files\Inno Setup 6\ISCC.exe"
+    )
+    foreach ($c in $candidates) {
+        if (Test-Path $c) { $iscc = $c; break }
+    }
+}
+
+if ($iscc) {
+    Write-Host ""
+    Write-Host "Compiling Windows Installer (.exe) with Inno Setup..." -ForegroundColor Cyan
+    $issFile = "$root\installer\inno\NativeBangla.iss"
+    & $iscc "/dMyAppVersion=$Version" $issFile
+    $exePath = "$root\dist\NativeBangla-v${Version}-Setup.exe"
+    if (Test-Path $exePath) {
+        Write-Host "Windows Setup Installer ready:" -ForegroundColor Green
+        Write-Host "  $exePath"
+        Write-Host "  Size: $([math]::Round((Get-Item $exePath).Length / 1MB, 2)) MB"
+    }
+} else {
+    Write-Warning "Inno Setup compiler (ISCC.exe) not found. Skipped building .exe installer."
+}

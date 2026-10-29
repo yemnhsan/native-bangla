@@ -98,7 +98,24 @@ jobs:
         working-directory: apps/desktop
         run: npm run build
 
-      # ── Bundle release package ────────────────────────────────────────────
+      # ── Build Windows Installer (.exe) via Inno Setup ────────────────────
+      - name: Build Windows Installer (.exe)
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress
+          $version = "${{ github.ref_name }}" -replace '^v',''
+          if (-not (Test-Path "target\release\libunwind.dll")) {
+            New-Item -ItemType File -Path "target\release\libunwind.dll" -Force | Out-Null
+          }
+          $isccCmd = Get-Command iscc -ErrorAction SilentlyContinue
+          $iscc = if ($isccCmd) { $isccCmd.Source } else { $null }
+          if (-not $iscc) {
+            $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          }
+          & $iscc "/dMyAppVersion=$version" "installer\inno\NativeBangla.iss"
+          Write-Host "Built installer: dist\NativeBangla-v${version}-Setup.exe"
+
+      # ── Bundle release package (.zip) ────────────────────────────────────
       - name: Bundle release artifacts
         id: bundle
         shell: pwsh
@@ -114,10 +131,6 @@ jobs:
           # Core DLLs
           Copy-Item "target\release\NativeBanglaIME.dll" $releaseDir
           Copy-Item "target\release\ime_bridge.dll"      $releaseDir
-
-          # MSVC runtime DLLs are part of Windows 10+, no need to bundle separately.
-          # Only bundle if ime_bridge was built with GNU toolchain (add libunwind.dll).
-          # For MSVC builds this is not needed.
 
           # Seed dictionary
           $dictSrc = "resources\dictionaries\bn-core-seed.json"
@@ -136,16 +149,16 @@ jobs:
             "Native Bangla IME v${version}",
             "================================",
             "",
-            "INSTALLATION (requires Administrator)",
-            "--------------------------------------",
-            "1. Right-click install.ps1 -> Run with PowerShell (as Administrator)",
-            "   OR open an elevated PowerShell and run:",
-            "      Set-ExecutionPolicy Bypass -Scope Process -Force",
-            "      .\install.ps1",
+            "INSTALLATION",
+            "------------",
+            "Prefer the installer: run NativeBangla-v${version}-Setup.exe instead!",
+            "",
+            "Manual installation (Admin PowerShell):",
+            "  .\install.ps1",
             "",
             "UNINSTALL",
             "---------",
-            "   .\uninstall.ps1   (as Administrator)",
+            "  .\uninstall.ps1",
             "",
             "REQUIREMENTS",
             "------------",
@@ -173,34 +186,33 @@ jobs:
         with:
           name: "Native Bangla IME ${{ github.ref_name }}"
           body: |
-            ## Native Bangla IME ${{ github.ref_name }}
+            ## 🇧🇩 Native Bangla IME ${{ github.ref_name }}
 
-            A high-performance, offline-first Bangla input method for Windows.
+            A high-performance, offline-first Bangla phonetic input method for Windows.
 
-            ### Download & Install
+            ### 🚀 Easy Installation (Recommended for all users)
 
-            1. Download `NativeBangla-${{ github.ref_name }}-windows-x64.zip`
-            2. Extract the zip
-            3. Right-click `install.ps1` -> **Run with PowerShell (as Administrator)**
-            4. Log off and back on
-            5. Go to **Settings > Time & Language > Language**, add Bengali (Bangladesh) and select **Native Bangla IME**
+            1. Download **`NativeBangla-${{ github.ref_name }}-Setup.exe`** below.
+            2. Double-click the `.exe` file to run the installer.
+            3. Follow the setup wizard and click **Install**.
+            4. Once finished, open **Settings > Time & Language > Language**, ensure **Bengali (Bangladesh)** is added, and select **Native Bangla IME**.
+            5. Switch between English and Bangla anytime using <kbd>Win</kbd> + <kbd>Space</kbd>!
 
-            ### Contents
+            ---
 
-            | File | Description |
-            |------|-------------|
-            | `NativeBanglaIME.dll` | Windows TSF IME (registered via regsvr32) |
-            | `ime_bridge.dll` | Rust phonetic engine bridge |
-            | `resources/dictionaries/bn-core-seed.json` | Core Bangla dictionary |
-            | `install.ps1` | Installer (run as Administrator) |
-            | `uninstall.ps1` | Uninstaller |
+            ### 📦 Downloads
 
-            ### Requirements
-            - Windows 10 x64 or later
-            - Bengali (Bangladesh) language pack
+            | File | Description | Recommended for |
+            |------|-------------|-----------------|
+            | **`NativeBangla-${{ github.ref_name }}-Setup.exe`** | **Standard Windows Installer** (automatic setup, registers IME, adds to PATH, includes uninstaller) | **All users** ⭐ |
+            | `NativeBangla-${{ github.ref_name }}-windows-x64.zip` | Standalone portable bundle with DLLs and PowerShell scripts | Advanced users |
 
+            ### System Requirements
+            - Windows 10 x64 or Windows 11
+            - Bengali (Bangladesh) language pack in Windows Settings
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            ${{ steps.bundle.outputs.zip_path }}
+            dist/NativeBangla-*-Setup.exe
+            dist/NativeBangla-*-windows-x64.zip
           generate_release_notes: true
