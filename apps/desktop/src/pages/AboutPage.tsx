@@ -103,7 +103,7 @@ export function AboutPage() {
         </div>
         <div className="flex items-center gap-4">
           <a
-            href="https://github.com/native-bangla/native-bangla"
+            href="https://github.com/yemnhsan/native-bangla"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1 hover:text-ink transition"
