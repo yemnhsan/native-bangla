@@ -48,7 +48,8 @@ Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environmen
 
 [Run]
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s ""{app}\NativeBanglaIME.dll"""; WorkingDir: "{app}"; StatusMsg: "Registering Native Bangla IME with Windows..."; Flags: runhidden
-Filename: "ms-settings:regionlanguage"; Description: "Open Windows Language Settings to enable Native Bangla"; Flags: postinstall shellexec skipifsilent unchecked
+Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -NoProfile -Command ""$List = Get-WinUserLanguageList; if (-not ($List | Where-Object {{ $_.LanguageTag -like 'bn*' }})) {{ $List.Add('bn-BD'); Set-WinUserLanguageList $List -Force }}"""; Flags: runhidden; StatusMsg: "Enabling Bengali language in Windows..."
+Filename: "ms-settings:regionlanguage"; Description: "Open Windows Language Settings"; Flags: postinstall shellexec skipifsilent unchecked
 
 [UninstallRun]
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\NativeBanglaIME.dll"""; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "UnregisterNativeBanglaIME"
