@@ -76,3 +76,4 @@ Write-Host "Please log off and log back in (or restart) to activate Native Bangl
 Write-Host "Then go to: Settings > Time & Language > Language > Preferred languages"
 Write-Host "Add Bengali (Bangladesh) and select 'Native Bangla IME' as the input method."
 Write-Host ""
+

@@ -50,3 +50,4 @@ Write-Host ""
 Write-Host "Uninstallation complete." -ForegroundColor Green
 Write-Host "Please log off and log back in for changes to take effect." -ForegroundColor Yellow
 Write-Host ""
+
