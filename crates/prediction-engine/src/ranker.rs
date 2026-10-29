@@ -16,7 +16,7 @@ pub struct RankWeights {
 impl Default for RankWeights {
     fn default() -> Self {
         Self {
-            frequency: 1.0,
+            frequency: 5.0,
             personal: 2.5,
             context: 1.8,
             exact_phonetic: 3.0,

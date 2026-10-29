@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include <msctf.h>
-#include <windows.h>
+#include "NativeBanglaIME.h"
 
 #include "CandidateList.h"
 #include "Composition.h"

@@ -74,7 +74,7 @@ impl NativeEngine {
         self
     }
 
-    pub fn load_dictionary_path(mut self, path: impl AsRef<std::path::Path>) -> Result<Self, EngineError> {
+    pub fn load_dictionary_path(self, path: impl AsRef<std::path::Path>) -> Result<Self, EngineError> {
         let dict = Dictionary::load(path)?;
         Ok(self.with_dictionary(dict))
     }

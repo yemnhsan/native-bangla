@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <windows.h>
+#include "NativeBanglaIME.h"
 
 class CClassFactory final : public IClassFactory {
 public:

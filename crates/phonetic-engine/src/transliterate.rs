@@ -66,6 +66,21 @@ pub fn transliterate(input: &str, config: &PhoneticConfig) -> String {
 }
 
 fn transliterate_token(input: &str, config: &PhoneticConfig) -> String {
+    if config.use_word_overrides {
+        let lower = input.to_ascii_lowercase();
+        if let Some((_, bn)) = WORD_OVERRIDES.iter().find(|(en, _)| *en == lower.as_str()) {
+            return (*bn).to_string();
+        }
+        let trimmed_punct = lower.trim_end_matches(|c: char| c == '.' || c == ',' || c == '?' || c == '!' || c == ';');
+        if trimmed_punct != lower && !trimmed_punct.is_empty() {
+            if let Some((_, bn)) = WORD_OVERRIDES.iter().find(|(en, _)| *en == trimmed_punct) {
+                let suffix = &input[trimmed_punct.len()..];
+                let suffix_trans = transliterate_token(suffix, config);
+                return format!("{}{}", bn, suffix_trans);
+            }
+        }
+    }
+
     let mut out = String::with_capacity(input.len() * 3);
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0usize;
@@ -136,7 +151,10 @@ fn transliterate_token(input: &str, config: &PhoneticConfig) -> String {
 
     // Post-process: attach vowel kars after consonants
     let shaped = shape_vowels(&out);
-    shaped.nfc().collect()
+    let nfc: String = shaped.nfc().collect();
+    nfc.replace("\u{09AF}\u{09BC}", "\u{09DF}")
+        .replace("\u{09A1}\u{09BC}", "\u{09DC}")
+        .replace("\u{09A2}\u{09BC}", "\u{09DD}")
 }
 
 fn apply_replacement(

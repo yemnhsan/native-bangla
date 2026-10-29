@@ -4,7 +4,29 @@
 #pragma once
 
 #include <windows.h>
+#include <unknwn.h>
 #include <msctf.h>
+#include <new>
+
+#ifndef TF_CLIENTID_NULL
+#define TF_CLIENTID_NULL 0
+#endif
+
+#ifndef __ITfTextInputProcessorEx_INTERFACE_DEFINED__
+#define __ITfTextInputProcessorEx_INTERFACE_DEFINED__
+
+static const IID IID_ITfTextInputProcessorEx = {
+    0x3F4D6EE1, 0x54A4, 0x484D, {0x88, 0xE0, 0x64, 0xF4, 0x25, 0xA8, 0x4D, 0x58}};
+
+MIDL_INTERFACE("3F4D6EE1-54A4-484D-88E0-64F425A84D58")
+ITfTextInputProcessorEx : public ITfTextInputProcessor {
+public:
+    virtual HRESULT STDMETHODCALLTYPE ActivateEx(
+        /* [in] */ ITfThreadMgr *ptim,
+        /* [in] */ TfClientId tid,
+        /* [in] */ DWORD dwFlags) = 0;
+};
+#endif
 
 // Stable GUIDs for Native Bangla TSF registration. Do not regenerate casually;
 // changing them breaks existing user profiles and registry state.

@@ -194,7 +194,7 @@ impl Predictor {
         // Suppress low-confidence noisy sets
         if suggestions.len() > 1 {
             let best = suggestions[0].score;
-            suggestions.retain(|s| s.score >= best * 0.15 || s.text == primary);
+            suggestions.retain(|s| s.score >= best * 0.10 || s.text == primary);
             suggestions.truncate(limit);
         }
 

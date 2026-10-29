@@ -6,8 +6,7 @@
 
 #pragma once
 
-#include <msctf.h>
-#include <windows.h>
+#include "NativeBanglaIME.h"
 
 #include <string>
 

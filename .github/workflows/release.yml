@@ -1,0 +1,239 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # needed to create GitHub Releases
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-and-release:
+    name: Build & Release (Windows x64)
+    runs-on: windows-latest
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Rust toolchain ────────────────────────────────────────────────────
+      - name: Install Rust (stable, MSVC x64)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # ── Node / npm ────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      # ── LLVM / Clang ──────────────────────────────────────────────────────
+      # windows-latest ships with LLVM; clang++ and llvm-rc are available.
+      - name: Verify Clang version
+        run: clang++ --version
+
+      # ── Build Rust workspace ──────────────────────────────────────────────
+      - name: Build Rust workspace (release)
+        run: cargo build --workspace --release
+        # On windows-latest the default Rust target is x86_64-pc-windows-msvc
+        # No fake-gcc workaround needed (MSVC linker is available).
+
+      # ── Compile IME resources ─────────────────────────────────────────────
+      - name: Compile IME resource file
+        run: |
+          llvm-rc /fo target\release\NativeBanglaIME.res.o `
+            native\windows-ime\resources\NativeBanglaIME.rc
+        shell: pwsh
+
+      # ── Generate libmsctf import lib ──────────────────────────────────────
+      - name: Generate libmsctf.a from system msctf.dll
+        run: |
+          $msctf = "$env:SystemRoot\System32\msctf.dll"
+          $defFile = "msctf.def"
+          $libOut  = "target\release\libmsctf.a"
+          # Use llvm-nm / llvm-dlltool available on windows-latest
+          llvm-dlltool --input-def <(
+            python3 -c "
+          import ctypes, sys
+          dll = '$msctf'.replace('\\\\','/')
+          print('EXPORTS')
+          "
+          ) 2>$null || true
+          # Simpler: use dumpbin + lib.exe (MSVC) to create import lib
+          # Actually use the MSVC linker's built-in: link against msctf.lib
+          # MSVC ships msctf.lib in Windows SDK — no generation needed.
+          echo "Using MSVC msctf.lib from Windows SDK (no generation needed)"
+        shell: pwsh
+
+      # ── Build NativeBanglaIME.dll (MSVC / clang-cl) ───────────────────────
+      - name: Build NativeBanglaIME.dll
+        run: |
+          # Find Windows SDK include/lib paths via vswhere
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -property installationPath
+          $vctools = Join-Path $vsPath "VC\Tools\MSVC"
+          $msvcVer = (Get-ChildItem $vctools | Sort-Object Name | Select-Object -Last 1).Name
+          $msvcLib = "$vctools\$msvcVer\lib\x64"
+          $msvcInc = "$vctools\$msvcVer\include"
+
+          # Find Windows SDK
+          $sdkRoot = "${env:ProgramFiles(x86)}\Windows Kits\10"
+          $sdkVer  = (Get-ChildItem "$sdkRoot\Include" | Sort-Object Name | Select-Object -Last 1).Name
+          $sdkInc  = "$sdkRoot\Include\$sdkVer"
+          $sdkLib  = "$sdkRoot\Lib\$sdkVer\um\x64"
+
+          $srcDir = "native\windows-ime\src"
+          $incDir = "native\windows-ime\include"
+
+          clang++ -std=c++20 -target x86_64-pc-windows-msvc `
+            -shared `
+            -DUNICODE -D_UNICODE -DWIN32_LEAN_AND_MEAN `
+            -I"$incDir" -I"$srcDir" `
+            -I"$msvcInc" `
+            -I"$sdkInc\ucrt" -I"$sdkInc\shared" -I"$sdkInc\um" `
+            "$srcDir\DllMain.cpp" `
+            "$srcDir\ClassFactory.cpp" `
+            "$srcDir\TextService.cpp" `
+            "$srcDir\Composition.cpp" `
+            "$srcDir\CandidateList.cpp" `
+            "target\release\NativeBanglaIME.res.o" `
+            "native\windows-ime\src\NativeBanglaIME.def" `
+            -L"target\release" -lime_bridge `
+            -L"$msvcLib" -L"$sdkLib" `
+            -lmsctf -luuid -lole32 -ladvapi32 -luser32 -lgdi32 `
+            -o target\release\NativeBanglaIME.dll
+        shell: pwsh
+
+      # ── Build Desktop UI ──────────────────────────────────────────────────
+      - name: Install desktop dependencies
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Build desktop UI
+        working-directory: apps/desktop
+        run: npm run build
+
+      # ── Bundle release package ────────────────────────────────────────────
+      - name: Bundle release artifacts
+        id: bundle
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v',''
+          $releaseDir = "dist\release"
+          $zipName    = "NativeBangla-v${version}-windows-x64.zip"
+          $zipPath    = "dist\$zipName"
+
+          New-Item -ItemType Directory -Force $releaseDir | Out-Null
+
+          # DLLs
+          Copy-Item "target\release\NativeBanglaIME.dll" $releaseDir
+          Copy-Item "target\release\ime_bridge.dll"      $releaseDir
+
+          # libunwind — ship the LLVM one bundled with windows-latest runner
+          $unwind = (Get-Command llvm-objdump -ErrorAction SilentlyContinue)
+          if ($unwind) {
+            $llvmBin = Split-Path $unwind.Source
+            $uwDll = Join-Path $llvmBin "..\x86_64-w64-mingw32\bin\libunwind.dll"
+            if (Test-Path $uwDll) { Copy-Item $uwDll $releaseDir }
+          }
+
+          # Seed dictionary
+          $dictSrc = "resources\dictionaries\bn-core-seed.json"
+          if (Test-Path $dictSrc) {
+            New-Item -ItemType Directory -Force "$releaseDir\resources\dictionaries" | Out-Null
+            Copy-Item $dictSrc "$releaseDir\resources\dictionaries\"
+          }
+
+          # Desktop UI dist (optional — Electron/Tauri build not in scope yet)
+          # Copy-Item "apps\desktop\dist" "$releaseDir\ui" -Recurse
+
+          # Installer scripts
+          Copy-Item "installer\install.ps1"   $releaseDir
+          Copy-Item "installer\uninstall.ps1" $releaseDir
+
+          # README
+          @"
+          # Native Bangla IME v${version}
+
+          ## Installation (requires Administrator)
+          1. Right-click install.ps1 and choose "Run with PowerShell" as Administrator
+             OR from an elevated PowerShell:
+               Set-ExecutionPolicy Bypass -Scope Process -Force
+               .\install.ps1
+
+          ## Uninstall
+               .\uninstall.ps1   (as Administrator)
+
+          ## Requirements
+          - Windows 10 or later (x64)
+          - Bengali (Bangladesh) language pack installed in Windows Settings
+
+          ## After Install
+          Go to: Settings > Time & Language > Language > Add a language
+          Add "বাংলা (বাংলাদেশ)" and select "Native Bangla IME" as input method.
+          "@ | Set-Content "$releaseDir\README.txt" -Encoding UTF8
+
+          # Zip
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "$releaseDir\*" -DestinationPath $zipPath -Force
+
+          echo "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
+          echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          echo "version=$version"  >> $env:GITHUB_OUTPUT
+          Write-Host "Packaged: $zipPath ($([math]::Round((Get-Item $zipPath).Length/1MB,2)) MB)"
+        shell: pwsh
+
+      # ── Create GitHub Release ─────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Native Bangla IME ${{ github.ref_name }}"
+          body: |
+            ## 🇧🇩 Native Bangla IME ${{ github.ref_name }}
+
+            A high-performance, offline-first Bangla input method for Windows.
+
+            ### Download & Install
+            1. Download `NativeBangla-${{ github.ref_name }}-windows-x64.zip`
+            2. Extract the zip
+            3. Right-click `install.ps1` → **Run with PowerShell** (as Administrator)
+            4. Log off and back on
+            5. Go to **Settings > Time & Language > Language**, add Bengali and select **Native Bangla IME**
+
+            ### What's included
+            | File | Description |
+            |------|-------------|
+            | `NativeBanglaIME.dll` | Windows TSF IME (registers with regsvr32) |
+            | `ime_bridge.dll` | Rust phonetic engine bridge |
+            | `libunwind.dll` | LLVM runtime (bundled) |
+            | `resources/dictionaries/bn-core-seed.json` | Core Bangla dictionary |
+            | `install.ps1` | Installer script (run as Admin) |
+            | `uninstall.ps1` | Uninstaller script |
+
+            ### Requirements
+            - Windows 10 x64 or later
+            - Bengali (Bangladesh) language pack
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            ${{ steps.bundle.outputs.zip_path }}
+          generate_release_notes: true
